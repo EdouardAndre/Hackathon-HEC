@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from app.models.supplier import Supplier
+from app.repositories.models.supplier import Supplier
 from app.repositories.suppliers import SupplierRepository
-from app.schemas.forecasting import ForecastRequest, ForecastResponse
-from app.schemas.recommendations import (
+from app.presentation.schemas.forecasting import ForecastRequest
+from app.presentation.schemas.recommendations import (
     SupplierRecommendationItem,
     SupplierRecommendationResponse,
 )
+from app.services.forecasting import ForecastingService
 
 
 def rank_suppliers(
@@ -58,17 +59,18 @@ def rank_suppliers(
 
 
 class SupplierRecommendationService:
-    def __init__(self, supplier_repository: SupplierRepository) -> None:
+    def __init__(
+        self,
+        supplier_repository: SupplierRepository,
+        forecasting_service: ForecastingService,
+    ) -> None:
         self.supplier_repository = supplier_repository
+        self.forecasting_service = forecasting_service
 
     def recommend(self, payload: ForecastRequest) -> SupplierRecommendationResponse:
+        forecast = self.forecasting_service.generate_forecast(payload)
         suppliers = self.supplier_repository.list_all()
-        forecast = ForecastResponse(
-            expected_shortage_date=payload.expected_shortage_date,
-            required_quantity=payload.required_quantity,
-            source="manual",
-        )
-        recommendations = rank_suppliers(suppliers, payload.required_quantity)
+        recommendations = rank_suppliers(suppliers, forecast.required_quantity)
         return SupplierRecommendationResponse(
             forecast=forecast,
             recommendations=recommendations,

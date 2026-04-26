@@ -1,8 +1,8 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.purchase_order import PurchaseOrder
-from app.schemas.orders import PurchaseOrderCreate
+from app.repositories.models.purchase_order import PurchaseOrder
+from app.presentation.schemas.orders import PurchaseOrderCreate
 
 
 class PurchaseOrderRepository:
