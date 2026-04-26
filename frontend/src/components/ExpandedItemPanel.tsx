@@ -53,12 +53,15 @@ export function ExpandedItemPanel({ item, paymentUrl }: ExpandedItemPanelProps) 
       <section className="expanded-panel">
         <div className="expanded-panel__summary">
           <div>
-            <h3>{selectedOption.supplierName}</h3>
-            <p className="muted-copy">
-              {item.expectedShortageDate
-                ? `Forecasted shortage on ${item.expectedShortageDate}.`
-                : "No shortage predicted in the current horizon."}
-            </p>
+            <p className="optimal-label">Optimal supplier</p>
+            <div className="expanded-panel__heading">
+              <h3>{selectedOption.supplierName}</h3>
+              <p className="muted-copy expanded-panel__shortage">
+                {item.expectedShortageDate
+                  ? `Forecasted shortage on ${item.expectedShortageDate}.`
+                  : "No shortage predicted in the current horizon."}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -77,11 +80,13 @@ export function ExpandedItemPanel({ item, paymentUrl }: ExpandedItemPanelProps) 
           </div>
           <div>
             <dt>Available now</dt>
-            <dd>{selectedOption.availableQuantity}</dd>
+            <dd>{selectedOption.availableQuantity} {item.unitLabel}</dd>
           </div>
           <div>
             <dt>Required qty</dt>
-            <dd>{item.requiredQuantity}</dd>
+            <dd>
+              {item.requiredQuantity} {item.unitLabel}
+            </dd>
           </div>
         </dl>
 

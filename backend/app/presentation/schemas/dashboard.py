@@ -17,6 +17,7 @@ class DashboardItem(BaseModel):
     id: str
     name: str
     sku: str
+    unit_label: str
     store_id: int
     item_id: int
     current_quantity: int
@@ -25,7 +26,7 @@ class DashboardItem(BaseModel):
     expected_shortage_date: date | None
     required_quantity: int
     forecast_source: str
-    best_option: DashboardSupplierOption
+    best_option: DashboardSupplierOption | None
     alternatives: list[DashboardSupplierOption]
 
 
