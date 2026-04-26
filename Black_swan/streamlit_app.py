@@ -82,6 +82,29 @@ st.markdown("""
 
 .page-headline { font-size:1.35rem; font-weight:800; color:#111827; letter-spacing:-0.01em; margin-bottom:.1rem; }
 .page-sub      { font-size:.84rem;  color:#6b7280; margin-bottom:1rem; }
+
+@keyframes t-row-in {
+  from { opacity:0; transform:translateX(-10px); }
+  to   { opacity:1; transform:translateX(0); }
+}
+@keyframes dot-pop {
+  0%   { transform:scale(0.4); opacity:0.2; }
+  65%  { transform:scale(1.25); }
+  100% { transform:scale(1);   opacity:1; }
+}
+@keyframes dot-pulse {
+  0%,100% { box-shadow:0 0 0 0 rgba(59,130,246,0.45); }
+  50%     { box-shadow:0 0 0 7px rgba(59,130,246,0); }
+}
+@keyframes dot-warn-pulse {
+  0%,100% { box-shadow:0 0 0 0 rgba(249,115,22,0.45); }
+  50%     { box-shadow:0 0 0 7px rgba(249,115,22,0); }
+}
+
+.t-row      { animation: t-row-in 0.32s ease both; }
+.t-dot-done { animation: dot-pop 0.38s cubic-bezier(.34,1.56,.64,1) both; }
+.t-dot-active { animation: dot-pulse 1.5s ease-in-out infinite; }
+.t-dot-warn   { animation: dot-warn-pulse 1.5s ease-in-out infinite; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -831,7 +854,11 @@ with col_right:
     st.markdown('<div class="ap-card"><div class="ap-card-header">Agent journey</div>',
                 unsafe_allow_html=True)
 
-    def _t_row(label: str, ts: str | None, style: str = "idle"):
+    # Longer stagger when all steps are already computed (fake replay animation).
+    _replay = app_state not in ("idle", "preparing")
+    _step_delay = 0.45 if _replay else 0.06
+
+    def _t_row(label: str, ts: str | None, style: str = "idle", idx: int = 0):
         dot_class = {
             "done":   "t-dot-done",
             "active": "t-dot-active",
@@ -840,42 +867,43 @@ with col_right:
             "idle":   "t-dot-idle",
         }.get(style, "t-dot-idle")
         icons = {"done": "✓", "active": "…", "warn": "!", "err": "✗", "idle": "·"}
-        icon  = icons.get(style, "·")
+        icon    = icons.get(style, "·")
         ts_html = f'<div class="t-ts">{_ts_fmt(ts)}</div>' if ts else ""
-        st.markdown(f"""<div class="t-row">
-  <div class="t-dot {dot_class}">{icon}</div>
+        delay   = f"{idx * _step_delay:.2f}s"
+        st.markdown(f"""<div class="t-row" style="animation-delay:{delay}">
+  <div class="t-dot {dot_class}" style="animation-delay:{delay}">{icon}</div>
   <div><div class="t-label">{label}</div>{ts_html}</div>
 </div>""", unsafe_allow_html=True)
 
-    _t_row("Invoice received",      tl.get("invoice_received"),          "done" if tl.get("invoice_received") else "idle")
+    _t_row("Invoice received",      tl.get("invoice_received"),          "done" if tl.get("invoice_received") else "idle", 0)
 
     ms = mr.get("status", "")
     match_style = {"MATCH_OK": "done", "MATCH_WITH_WARNING": "warn", "MATCH_FAILED": "err"}.get(ms, "idle")
-    _t_row("Automatic verification", tl.get("matching_completed"),        match_style)
+    _t_row("Automatic verification", tl.get("matching_completed"),        match_style, 1)
 
-    _t_row("Purchase order matched", tl.get("po_draft_created"),          "done" if tl.get("po_draft_created") else "idle")
+    _t_row("Purchase order matched", tl.get("po_draft_created"),          "done" if tl.get("po_draft_created") else "idle", 2)
 
     ai_style = {"proceed_with_payment": "done", "hold_for_review": "warn", "block": "err"}.get(ai_action, "idle") if ar else "idle"
-    _t_row("Email reviewed",         tl.get("ai_recommendation_created"), ai_style)
+    _t_row("Email reviewed",         tl.get("ai_recommendation_created"), ai_style, 3)
 
     if tl.get("payment_draft_skipped"):
-        _t_row("Payment ready",      tl.get("payment_draft_skipped"),     "err")
+        _t_row("Payment ready",      tl.get("payment_draft_skipped"),     "err",  4)
     else:
-        _t_row("Payment ready",      tl.get("payment_draft_created"),     "done" if tl.get("payment_draft_created") else "idle")
+        _t_row("Payment ready",      tl.get("payment_draft_created"),     "done" if tl.get("payment_draft_created") else "idle", 4)
 
     review_style = "active" if app_state == "ready_for_review" else (
         "done" if app_state not in ("preparing", "ready_for_review", "idle") else "idle"
     )
-    _t_row("Pending review",         tl.get("waiting_human_review"),      review_style)
+    _t_row("Pending review",         tl.get("waiting_human_review"),      review_style, 5)
 
     if tl.get("payment_consent_pending"):
-        _t_row("Final confirmation", tl["payment_consent_pending"],       "done")
+        _t_row("Final confirmation", tl["payment_consent_pending"],       "done", 6)
     if tl.get("payment_execution_completed"):
-        _t_row("Payment sent",       tl["payment_execution_completed"],   "done")
+        _t_row("Payment sent",       tl["payment_execution_completed"],   "done", 7)
     if tl.get("mock_approved"):
-        _t_row("Payment sent",       tl["mock_approved"],                 "done")
+        _t_row("Payment sent",       tl["mock_approved"],                 "done", 7)
     if tl.get("rejected"):
-        _t_row("Rejected",           tl["rejected"],                      "err")
+        _t_row("Rejected",           tl["rejected"],                      "err",  6)
 
     st.markdown('</div>', unsafe_allow_html=True)
 
