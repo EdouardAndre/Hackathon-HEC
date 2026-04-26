@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -10,7 +12,9 @@ class SupplierRepository:
         self.session = session
 
     def create(self, payload: SupplierCreate) -> Supplier:
-        supplier = Supplier(**payload.model_dump())
+        data = payload.model_dump()
+        data["name"] = f"supplier-{uuid4().hex[:8]}"
+        supplier = Supplier(**data)
         self.session.add(supplier)
         self.session.commit()
         self.session.refresh(supplier)
