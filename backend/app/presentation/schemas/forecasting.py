@@ -66,3 +66,7 @@ class ForecastResponse(BaseModel):
     )
     daily_forecasts: list[DailyForecast]
     source: str = "chronos"
+
+
+class PredictResponse(BaseModel):
+    required_quantity: int = Field(description="Quantité à commander pour couvrir la demande prévue")
