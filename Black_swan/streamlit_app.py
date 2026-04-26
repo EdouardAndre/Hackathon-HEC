@@ -105,6 +105,47 @@ st.markdown("""
 .t-dot-done { animation: dot-pop 0.38s cubic-bezier(.34,1.56,.64,1) both; }
 .t-dot-active { animation: dot-pulse 1.5s ease-in-out infinite; }
 .t-dot-warn   { animation: dot-warn-pulse 1.5s ease-in-out infinite; }
+
+/* ── Loading screen ── */
+.ld-wrap { display:flex; justify-content:center; padding:3rem 1rem; }
+.ld-card {
+  background:#fff; border:1px solid #e5e8ed; border-radius:16px;
+  padding:2rem 2.4rem; width:100%; max-width:480px;
+  box-shadow:0 8px 32px rgba(0,0,0,.08);
+}
+.ld-brand { display:flex; align-items:center; gap:.9rem; margin-bottom:1.8rem; }
+.ld-brand-icon {
+  width:46px; height:46px; border-radius:12px; flex-shrink:0;
+  background:linear-gradient(135deg,#3b82f6 0%,#6366f1 100%);
+  color:#fff; font-weight:800; font-size:.95rem;
+  display:flex; align-items:center; justify-content:center; letter-spacing:-.02em;
+}
+.ld-brand-name { font-size:1.05rem; font-weight:700; color:#111827; }
+.ld-brand-sub  { font-size:.8rem;   color:#6b7280; margin-top:.15rem; }
+.ld-bar-track  { height:5px; border-radius:3px; background:#e5e8ed; margin-bottom:1.8rem; overflow:hidden; }
+.ld-bar-fill   {
+  height:100%; border-radius:3px;
+  background:linear-gradient(90deg,#3b82f6,#6366f1);
+  transition:width .5s cubic-bezier(.4,0,.2,1);
+}
+.ld-steps { display:flex; flex-direction:column; gap:.3rem; }
+.ld-step  {
+  display:flex; align-items:center; gap:.75rem;
+  padding:.45rem .6rem; border-radius:8px;
+  transition:background .25s;
+}
+.ld-step-active { background:#eff6ff; }
+.ld-step-done   { opacity:.55; }
+.ld-dot {
+  width:22px; height:22px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:.68rem; font-weight:800;
+}
+.ld-dot-done   { background:#d1fae5; color:#065f46; border:2px solid #10b981; }
+.ld-dot-active { background:#dbeafe; color:#1e40af; border:2px solid #3b82f6; animation:dot-pulse 1.5s ease-in-out infinite; }
+.ld-dot-idle   { background:#f3f4f6; color:#d1d5db; border:2px solid #e5e7eb; }
+.ld-step-label { font-size:.84rem; font-weight:600; color:#111827; line-height:1.2; }
+.ld-step-sub   { font-size:.74rem; color:#9ca3af; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -551,10 +592,6 @@ if app_state == "consent_pending":
 
 # ── Page header ────────────────────────────────────────────────────────────────
 hdr_l, hdr_r = st.columns([5, 2])
-with hdr_l:
-    st.markdown('<div class="page-headline">Anypay</div>', unsafe_allow_html=True)
-    st.markdown('<div class="page-sub">Procurement review &nbsp;·&nbsp; automated AP processing</div>',
-                unsafe_allow_html=True)
 with hdr_r:
     st.write("")
     if st.button("Reset", type="secondary", use_container_width=True):
@@ -580,93 +617,136 @@ if _oauth_exch_err:
 
 # ── Pipeline trigger ───────────────────────────────────────────────────────────
 if app_state == "idle":
-    ctl_l, ctl_r = st.columns([3, 1])
-    with ctl_l:
-        scenario = st.selectbox(
-            "Invoice scenario",
-            ["exact_match", "price_mismatch", "qty_mismatch"],
-            index=["exact_match", "price_mismatch", "qty_mismatch"].index(
-                st.session_state["invoice_scenario"]
-            ),
-        )
-        st.session_state["invoice_scenario"] = scenario
-    with ctl_r:
-        st.write("")
-        process_clicked = st.button("Review case", type="primary", use_container_width=True)
+    scenario = "exact_match"
+    st.session_state["invoice_scenario"] = scenario
+    st.session_state["app_state"] = "preparing"
 
-    if process_clicked:
-        trail = st.session_state["audit_trail"]
-        tl    = st.session_state["timeline"]
-        st.session_state["app_state"] = "preparing"
+    trail = st.session_state["audit_trail"]
+    tl    = st.session_state["timeline"]
+    now   = lambda: datetime.datetime.utcnow().isoformat() + "Z"
 
-        with st.spinner("Analysing case…"):
-            now = lambda: datetime.datetime.utcnow().isoformat() + "Z"
+    _ld_steps = [
+        ("Parsing request",        "Reading procurement data"),
+        ("AI normalization",       "Structuring with Gemini"),
+        ("Supplier verified",      "Confirming supplier ID"),
+        ("Purchase order created", "Drafting PO reference"),
+        ("Invoice received",       "Building mock invoice"),
+        ("Invoice parsed",         "Extracting line items with AI"),
+        ("3-way match",            "Comparing PO vs invoice"),
+        ("AI recommendation",      "Prepayment risk analysis"),
+        ("Payment draft ready",    "Finalising payment record"),
+    ]
 
-            tl["request_received"] = now()
-            trail = audit.log_event(trail, "request_received", {"request_id": raw["request_id"]})
+    _ld_ph = st.empty()
 
-            norm, mode_norm = gemini_service.normalize_request(raw)
-            tl["request_normalized"] = now()
-            trail = audit.log_event(trail, "request_normalized", {"mode": mode_norm})
-            st.session_state["normalized"]       = norm
-            st.session_state["gemini_mode_norm"] = mode_norm
-
-            tl["supplier_confirmed"] = now()
-            trail = audit.log_event(trail, "supplier_confirmed", {"supplier_id": norm.get("supplier_id")})
-
-            po = po_builder.build_po(norm)
-            tl["po_draft_created"] = now()
-            trail = audit.log_event(trail, "po_draft_created", {"po_reference": po["po_reference"]})
-            st.session_state["po"] = po
-
-            mock_inv = _build_invoice_from_request(raw, scenario)
-            mock_inv["po_reference"] = po["po_reference"]
-            tl["invoice_received"] = now()
-            trail = audit.log_event(trail, "invoice_received", {"scenario": scenario})
-            st.session_state["mock_invoice"] = mock_inv
-
-            structured, mode_inv = invoice_parser.structure_invoice(mock_inv)
-            tl["invoice_structured"] = now()
-            trail = audit.log_event(trail, "invoice_structured", {"mode": mode_inv})
-            st.session_state["structured_invoice"] = structured
-            st.session_state["gemini_mode_inv"]    = mode_inv
-
-            match_result = matching.run_matching(po, structured)
-            tl["matching_completed"] = now()
-            trail = audit.log_event(trail, "matching_completed", {"status": match_result["status"]})
-            st.session_state["matching_result"] = match_result
-
-            ai_rec, mode_rec = gemini_service.analyze_prepayment(norm, po, structured, match_result)
-            tl["ai_recommendation_created"] = now()
-            trail = audit.log_event(trail, "ai_recommendation_created", {
-                "mode": mode_rec, "action": ai_rec.get("recommended_action"),
-            })
-            st.session_state["ai_recommendation"] = ai_rec
-            st.session_state["gemini_mode_rec"]   = mode_rec
-
-            ai_blocks   = ai_rec.get("recommended_action") == "block"
-            match_fails = match_result["status"] == "MATCH_FAILED"
-
-            if not match_fails and not ai_blocks:
-                pd_obj = payment_draft.build_payment_draft(po, structured, match_result)
-                tl["payment_draft_created"] = now()
-                trail = audit.log_event(trail, "payment_draft_created", {"id": pd_obj["payment_draft_id"]})
-                st.session_state["payment_draft"] = pd_obj
+    def _render_loading(current):
+        pct = int(current / len(_ld_steps) * 100)
+        rows = ""
+        for i, (lbl, sub) in enumerate(_ld_steps):
+            if i < current:
+                dot_cls, icon, step_cls = "ld-dot-done",   "✓",         "ld-step ld-step-done"
+            elif i == current:
+                dot_cls, icon, step_cls = "ld-dot-active", str(i + 1),  "ld-step ld-step-active"
             else:
-                reason = "MATCH_FAILED" if match_fails else "AI_BLOCK"
-                tl["payment_draft_skipped"] = now()
-                trail = audit.log_event(trail, "payment_draft_skipped", {"reason": reason})
-                st.session_state["payment_draft"] = None
+                dot_cls, icon, step_cls = "ld-dot-idle",   str(i + 1),  "ld-step"
+            rows += f"""
+            <div class="{step_cls}">
+              <div class="ld-dot {dot_cls}">{icon}</div>
+              <div>
+                <div class="ld-step-label">{lbl}</div>
+                <div class="ld-step-sub">{sub}</div>
+              </div>
+            </div>"""
+        _ld_ph.markdown(f"""
+<div class="ld-wrap">
+  <div class="ld-card">
+    <div class="ld-brand">
+      <div class="ld-brand-icon">AP</div>
+      <div>
+        <div class="ld-brand-name">Automated AP review</div>
+        <div class="ld-brand-sub">Processing your case — please wait…</div>
+      </div>
+    </div>
+    <div class="ld-bar-track">
+      <div class="ld-bar-fill" style="width:{pct}%"></div>
+    </div>
+    <div class="ld-steps">{rows}</div>
+  </div>
+</div>""", unsafe_allow_html=True)
 
-            tl["waiting_human_review"] = now()
-            trail = audit.log_event(trail, "waiting_human_review", {})
+    _render_loading(0)
+    tl["request_received"] = now()
+    trail = audit.log_event(trail, "request_received", {"request_id": raw["request_id"]})
 
-            st.session_state["audit_trail"] = trail
-            st.session_state["timeline"]    = tl
-            st.session_state["app_state"]   = "ready_for_review"
+    _render_loading(1)
+    norm, mode_norm = gemini_service.normalize_request(raw)
+    tl["request_normalized"] = now()
+    trail = audit.log_event(trail, "request_normalized", {"mode": mode_norm})
+    st.session_state["normalized"]       = norm
+    st.session_state["gemini_mode_norm"] = mode_norm
 
-        st.rerun()
-    st.stop()
+    _render_loading(2)
+    tl["supplier_confirmed"] = now()
+    trail = audit.log_event(trail, "supplier_confirmed", {"supplier_id": norm.get("supplier_id")})
+
+    _render_loading(3)
+    po = po_builder.build_po(norm)
+    tl["po_draft_created"] = now()
+    trail = audit.log_event(trail, "po_draft_created", {"po_reference": po["po_reference"]})
+    st.session_state["po"] = po
+
+    _render_loading(4)
+    mock_inv = _build_invoice_from_request(raw, scenario)
+    mock_inv["po_reference"] = po["po_reference"]
+    tl["invoice_received"] = now()
+    trail = audit.log_event(trail, "invoice_received", {"scenario": scenario})
+    st.session_state["mock_invoice"] = mock_inv
+
+    _render_loading(5)
+    structured, mode_inv = invoice_parser.structure_invoice(mock_inv)
+    tl["invoice_structured"] = now()
+    trail = audit.log_event(trail, "invoice_structured", {"mode": mode_inv})
+    st.session_state["structured_invoice"] = structured
+    st.session_state["gemini_mode_inv"]    = mode_inv
+
+    _render_loading(6)
+    match_result = matching.run_matching(po, structured)
+    tl["matching_completed"] = now()
+    trail = audit.log_event(trail, "matching_completed", {"status": match_result["status"]})
+    st.session_state["matching_result"] = match_result
+
+    _render_loading(7)
+    ai_rec, mode_rec = gemini_service.analyze_prepayment(norm, po, structured, match_result)
+    tl["ai_recommendation_created"] = now()
+    trail = audit.log_event(trail, "ai_recommendation_created", {
+        "mode": mode_rec, "action": ai_rec.get("recommended_action"),
+    })
+    st.session_state["ai_recommendation"] = ai_rec
+    st.session_state["gemini_mode_rec"]   = mode_rec
+
+    _render_loading(8)
+    ai_blocks   = ai_rec.get("recommended_action") == "block"
+    match_fails = match_result["status"] == "MATCH_FAILED"
+
+    if not match_fails and not ai_blocks:
+        pd_obj = payment_draft.build_payment_draft(po, structured, match_result)
+        tl["payment_draft_created"] = now()
+        trail = audit.log_event(trail, "payment_draft_created", {"id": pd_obj["payment_draft_id"]})
+        st.session_state["payment_draft"] = pd_obj
+    else:
+        reason = "MATCH_FAILED" if match_fails else "AI_BLOCK"
+        tl["payment_draft_skipped"] = now()
+        trail = audit.log_event(trail, "payment_draft_skipped", {"reason": reason})
+        st.session_state["payment_draft"] = None
+
+    tl["waiting_human_review"] = now()
+    trail = audit.log_event(trail, "waiting_human_review", {})
+
+    st.session_state["audit_trail"] = trail
+    st.session_state["timeline"]    = tl
+    st.session_state["app_state"]   = "ready_for_review"
+
+    st.rerun()
 
 # ── Two-column layout ─────────────────────────────────────────────────────────
 col_left, col_right = st.columns([1.8, 1], gap="large")
