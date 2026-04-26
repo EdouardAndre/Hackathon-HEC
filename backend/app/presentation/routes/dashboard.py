@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from app.core.config import get_settings
 from app.presentation.deps import ForecastingServiceDep
 from app.presentation.schemas.dashboard import DashboardItemsResponse
 from app.services.dashboard import DashboardService
@@ -20,5 +21,9 @@ router = APIRouter()
 def list_dashboard_items(
     forecasting_service: ForecastingService = ForecastingServiceDep,
 ) -> DashboardItemsResponse:
-    service = DashboardService(forecasting_service)
+    settings = get_settings()
+    service = DashboardService(
+        forecasting_service=forecasting_service,
+        train_data_path=settings.train_data_path,
+    )
     return service.list_items()

@@ -33,13 +33,17 @@ export default function App() {
       setIsLoading(true);
       setError(null);
       try {
-        const data = await fetchDashboardItems();
+        const backendItems = await fetchDashboardItems();
         if (isActive) {
-          setItems(sortItemsByPriority(data));
+          setItems(sortItemsByPriority(backendItems));
         }
       } catch (loadError) {
         if (isActive) {
-          setError(loadError instanceof Error ? loadError.message : "Failed to load items.");
+          setError(
+            loadError instanceof Error
+              ? loadError.message
+              : "Failed to load dashboard items.",
+          );
         }
       } finally {
         if (isActive) {
@@ -61,59 +65,86 @@ export default function App() {
     warning: items.filter((item) => item.status === "warning").length,
     critical: items.filter((item) => item.status === "critical").length,
   };
+  const totalRequiredQuantity = items.reduce(
+    (sum, item) => sum + item.requiredQuantity,
+    0,
+  );
 
   return (
-    <div className="app-shell">
-      <header className="hero">
-        <div className="hero__copy">
-          <h1>BOB</h1>
-        </div>
-
-        <div className="hero__summary" aria-label="Inventory summary">
-          <div className="summary-card summary-card--healthy">
-            <span>Healthy</span>
-            <strong>{statusCounts.healthy}</strong>
+    <div className="dashboard-shell">
+      <div className="app-shell">
+        <header className="hero">
+          <div className="hero__copy">
+            <p className="hero__eyebrow">Overview</p>
+            <h1>BOB supplier dashboard</h1>
+            <p className="hero__subcopy">
+              Your AI agent prioritizes items that need supplier action first.
+            </p>
           </div>
-          <div className="summary-card summary-card--warning">
-            <span>Restock Soon</span>
-            <strong>{statusCounts.warning}</strong>
-          </div>
-          <div className="summary-card summary-card--critical">
-            <span>Urgent</span>
-            <strong>{statusCounts.critical}</strong>
-          </div>
-        </div>
-      </header>
 
-      <main className="inventory-stack">
-        {isLoading ? <p className="status-message">Loading model-evaluated items...</p> : null}
-        {error ? <p className="status-message status-message--error">{error}</p> : null}
-        {sortedItems.map((item) => {
-          const isExpanded = expandedItemId === item.id;
+          <div className="hero__summary" aria-label="Inventory summary">
+            <div className="summary-card summary-card--critical">
+              <span>Urgent items</span>
+              <strong>{statusCounts.critical}</strong>
+              <small>Immediate shortage risk</small>
+            </div>
+            <div className="summary-card summary-card--warning">
+              <span>Restock soon</span>
+              <strong>{statusCounts.warning}</strong>
+              <small>Needs procurement review</small>
+            </div>
+            <div className="summary-card summary-card--healthy">
+              <span>Healthy stock</span>
+              <strong>{statusCounts.healthy}</strong>
+              <small>No action required</small>
+            </div>
+            <div className="summary-card">
+              <span>Required quantity</span>
+              <strong>{totalRequiredQuantity}</strong>
+              <small>Total recommended order volume</small>
+            </div>
+          </div>
+        </header>
 
-          return (
-            <section className="inventory-row" key={item.id}>
-              <ItemStatusBar
-                isExpanded={isExpanded}
-                item={item}
-                onToggle={(itemId) =>
-                  setExpandedItemId((current) => (current === itemId ? null : itemId))
-                }
-              />
-              <div
-                aria-hidden={!isExpanded}
-                className={`inventory-row__panel ${
-                  isExpanded ? "inventory-row__panel--open" : ""
-                }`}
-              >
-                <div className="inventory-row__panel-inner">
-                  <ExpandedItemPanel item={item} paymentUrl={paymentUrl} />
-                </div>
-              </div>
-            </section>
-          );
-        })}
-      </main>
+        <main className="content-section">
+          <div className="content-section__header">
+            <div>
+              <h2>Items to review</h2>
+              <p>Sorted by urgency and restocking pressure.</p>
+            </div>
+          </div>
+
+          <div className="inventory-stack">
+            {isLoading ? <p className="status-message">Loading dashboard items...</p> : null}
+            {error ? <p className="status-message status-message--error">{error}</p> : null}
+            {sortedItems.map((item) => {
+              const isExpanded = expandedItemId === item.id;
+
+              return (
+                <section className="inventory-row" key={item.id}>
+                  <ItemStatusBar
+                    isExpanded={isExpanded}
+                    item={item}
+                    onToggle={(itemId) =>
+                      setExpandedItemId((current) => (current === itemId ? null : itemId))
+                    }
+                  />
+                  <div
+                    aria-hidden={!isExpanded}
+                    className={`inventory-row__panel ${
+                      isExpanded ? "inventory-row__panel--open" : ""
+                    }`}
+                  >
+                    <div className="inventory-row__panel-inner">
+                      <ExpandedItemPanel item={item} paymentUrl={paymentUrl} />
+                    </div>
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

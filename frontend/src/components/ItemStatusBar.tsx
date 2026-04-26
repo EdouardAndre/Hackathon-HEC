@@ -7,9 +7,9 @@ type ItemStatusBarProps = {
 };
 
 const statusCopy: Record<RestockStatus, string> = {
-  healthy: "Stock is healthy",
+  healthy: "Healthy",
   warning: "Restock soon",
-  critical: "Restock urgently",
+  critical: "Urgent",
 };
 
 export function ItemStatusBar({ item, isExpanded, onToggle }: ItemStatusBarProps) {
@@ -22,14 +22,23 @@ export function ItemStatusBar({ item, isExpanded, onToggle }: ItemStatusBarProps
       onClick={() => onToggle(item.id)}
       type="button"
     >
+      <div className="item-bar__icon" aria-hidden="true">
+        {item.name.slice(0, 2).toUpperCase()}
+      </div>
       <div className="item-bar__identity">
         <span className="item-bar__name">{item.name}</span>
         <span className="item-bar__sku">{item.sku}</span>
       </div>
       <div className="item-bar__meta">
-        <span>{item.currentQuantity} units</span>
-        <span>{statusCopy[item.status]}</span>
+        <span>{item.currentQuantity} {item.unitLabel}</span>
+        <span>{item.requiredQuantity} to order</span>
       </div>
+      <span className={`item-bar__status item-bar__status--${item.status}`}>
+        {statusCopy[item.status]}
+      </span>
+      <span className="item-bar__chevron" aria-hidden="true">
+        {isExpanded ? "⌃" : "›"}
+      </span>
     </button>
   );
 }

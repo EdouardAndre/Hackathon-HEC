@@ -12,6 +12,7 @@ export type InventoryItem = {
   id: string;
   name: string;
   sku: string;
+  unitLabel: string;
   storeId: number;
   itemId: number;
   currentQuantity: number;
@@ -29,6 +30,7 @@ export type DashboardResponse = {
     id: string;
     name: string;
     sku: string;
+    unit_label: string;
     store_id: number;
     item_id: number;
     current_quantity: number;
@@ -43,7 +45,7 @@ export type DashboardResponse = {
       lead_time_days: number;
       reliability_score: number;
       available_quantity: number;
-    };
+    } | null;
     alternatives: Array<{
       supplier_name: string;
       unit_price: number;
