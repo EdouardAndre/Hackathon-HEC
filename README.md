@@ -1,10 +1,12 @@
-# Hackathon HEC Backend
+# Hackathon HEC
 
-FastAPI backend scaffold for a fintech GenAI hackathon app focused on inventory forecasting, supplier comparison, and AP2-backed purchase order confirmation.
+FastAPI backend scaffold plus a React landing page prototype for inventory forecasting, supplier comparison, and purchase-order flow exploration.
 
 ## Structure
 
 ```text
+frontend/
+  src/
 backend/
   alembic/
     versions/
@@ -26,6 +28,19 @@ backend/
 ```
 
 ## Quick Start
+
+### Frontend
+
+```bash
+cd frontend
+cp .env.example .env
+npm install
+npm run dev
+```
+
+The landing page runs at `http://localhost:5173` and currently uses fake static inventory and supplier data.
+
+### Backend
 
 1. Create a virtual environment and install dependencies.
 2. Copy `backend/.env.example` to `backend/.env`.

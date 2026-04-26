@@ -40,6 +40,15 @@ button {
   min-height: 100vh;
 }
 
+.status-message {
+  margin: 4px 0 10px;
+  color: var(--ink-soft);
+}
+
+.status-message--error {
+  color: var(--critical-strong);
+}
+
 .app-shell {
   max-width: 1200px;
   margin: 0 auto;
@@ -245,7 +254,7 @@ button {
 
 .expanded-panel__summary {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 16px;
   align-items: start;
 }
@@ -255,20 +264,12 @@ button {
   font-size: 1.6rem;
 }
 
-.expanded-panel__pill {
-  white-space: nowrap;
-  border-radius: 999px;
-  background: rgba(18, 60, 112, 0.08);
-  color: var(--brand);
-  padding: 10px 14px;
-  font-weight: 700;
-}
-
 .detail-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 10px;
   margin: 18px 0;
+  overflow-x: auto;
 }
 
 .detail-grid div,
@@ -279,7 +280,9 @@ button {
 }
 
 .detail-grid div {
-  padding: 14px;
+  min-width: 150px;
+  flex: 1 1 0;
+  padding: 12px 14px;
 }
 
 dt {
@@ -417,7 +420,6 @@ dd {
 }
 
 @media (max-width: 560px) {
-  .detail-grid,
   .option-metrics {
     grid-template-columns: 1fr;
   }

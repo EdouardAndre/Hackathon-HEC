@@ -6,6 +6,7 @@ Ce backend prédit les ruptures de stock et recommande les meilleurs fournisseur
 ### Flux typique
 
 1. **`POST /forecasting/predict`** — Prédire la demande pour un article/magasin
+2. **`GET /dashboard/items`** — Alimenter le dashboard frontend avec des items évalués
 2. **`POST /recommendations/suppliers`** — Obtenir les fournisseurs classés selon la prévision
 3. **`POST /orders/drafts`** — Créer un bon de commande en brouillon
 4. **`POST /orders/{id}/confirm`** — Confirmer et soumettre la commande à AP2
@@ -20,6 +21,10 @@ Le modèle Chronos est entraîné sur des données historiques couvrant :
 """
 
 TAGS_METADATA = [
+    {
+        "name": "dashboard",
+        "description": "Items de démonstration enrichis par l'évaluation du modèle.",
+    },
     {
         "name": "forecasting",
         "description": "Prévision de la demande via Amazon Chronos T5.",

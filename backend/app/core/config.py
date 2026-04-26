@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     app_name: str = "Hackathon HEC Backend"
     app_env: str = "development"
     database_url: str
+    cors_origins: str = "http://localhost:5173"
     train_data_path: str = "../demand-forecasting-kernels-only/train.csv"
     chronos_model: str = "amazon/chronos-t5-small"
 

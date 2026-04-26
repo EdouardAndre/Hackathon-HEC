@@ -53,14 +53,12 @@ export function ExpandedItemPanel({ item, paymentUrl }: ExpandedItemPanelProps) 
       <section className="expanded-panel">
         <div className="expanded-panel__summary">
           <div>
-            <p className="eyebrow">Recommended supplier</p>
             <h3>{selectedOption.supplierName}</h3>
             <p className="muted-copy">
-              Best current fit based on price, lead time, reliability, and available stock.
+              {item.expectedShortageDate
+                ? `Forecasted shortage on ${item.expectedShortageDate}.`
+                : "No shortage predicted in the current horizon."}
             </p>
-          </div>
-          <div className="expanded-panel__pill">
-            Reorder {orderQuantity} units
           </div>
         </div>
 
@@ -80,6 +78,10 @@ export function ExpandedItemPanel({ item, paymentUrl }: ExpandedItemPanelProps) 
           <div>
             <dt>Available now</dt>
             <dd>{selectedOption.availableQuantity}</dd>
+          </div>
+          <div>
+            <dt>Required qty</dt>
+            <dd>{item.requiredQuantity}</dd>
           </div>
         </dl>
 
