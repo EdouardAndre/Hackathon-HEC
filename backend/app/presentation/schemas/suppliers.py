@@ -4,6 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class SupplierBase(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
     lead_time_days: int = Field(ge=0)
     available_quantity: int = Field(ge=0)
     current_unit_price: float = Field(gt=0)
@@ -17,6 +18,7 @@ class SupplierCreate(SupplierBase):
                 {
                     "summary": "Fournisseur fiable, livraison rapide",
                     "value": {
+                        "name": "Prime Corp",
                         "lead_time_days": 3,
                         "available_quantity": 800,
                         "current_unit_price": 11.50,
@@ -26,6 +28,7 @@ class SupplierCreate(SupplierBase):
                 {
                     "summary": "Fournisseur économique, délai plus long",
                     "value": {
+                        "name": "Apex Partners",
                         "lead_time_days": 7,
                         "available_quantity": 1200,
                         "current_unit_price": 8.20,
