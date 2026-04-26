@@ -239,7 +239,7 @@ def _fallback_analyze_prepayment(norm: dict, po: dict, invoice: dict, match: dic
         "confidence":        confidence,
         "anomalies_detected": list(issues),
         "human_review_note": (
-            "Auto-approuvé par le moteur de règles — Gemini indisponible." if action == "proceed_with_payment"
+            "Auto-approuvé par le moteur de règles." if action == "proceed_with_payment"
             else "Revue manuelle requise avant exécution."
         ),
     }

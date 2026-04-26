@@ -10,6 +10,7 @@ import urllib.parse
 
 import requests
 import streamlit as st
+import streamlit.components.v1 as components
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -124,9 +125,10 @@ print(f"  GOOGLE_CLOUD_PROJECT   : {os.getenv('GOOGLE_CLOUD_PROJECT','MISSING')}
 print(f"  GEMINI_API_KEY         : {'SET' if os.getenv('GEMINI_API_KEY') else 'MISSING'}", file=_sys.stderr)
 print("──────────────────────────────\n", file=_sys.stderr)
 
-# Absorb OAuth callback signal silently
-st.session_state.pop("_just_got_token", False)
-st.session_state.pop("oauth_error", None)
+# Capture OAuth callback signal — used below to auto-resume Confirm payment.
+_just_got_token = st.session_state.pop("_just_got_token", False)
+_oauth_err      = st.session_state.pop("oauth_error", None)
+_oauth_exch_err = st.session_state.pop("oauth_exchange_error", None)
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 def _exec_mode() -> str:
@@ -146,7 +148,6 @@ def _load_mock_request() -> dict:
     with open(path) as f:
         return json.load(f)
 
-
 def _query_value(key: str) -> str:
     value = st.query_params.get(key, "")
     if isinstance(value, list):
@@ -155,108 +156,143 @@ def _query_value(key: str) -> str:
 
 
 def _load_request_from_query() -> dict | None:
-    item_name = _query_value("item").strip()
-    sku = _query_value("sku").strip()
-    supplier_name = _query_value("supplier").strip()
-    quantity_raw = _query_value("quantity").strip()
+    item_name      = _query_value("item").strip()
+    sku            = _query_value("sku").strip()
+    supplier_name  = _query_value("supplier").strip()
+    quantity_raw   = _query_value("quantity").strip()
     unit_price_raw = _query_value("unitPrice").strip()
 
     if not item_name or not sku or not supplier_name or not quantity_raw or not unit_price_raw:
         return None
 
     base = _load_mock_request()
-
     try:
-        quantity = float(quantity_raw)
+        quantity   = float(quantity_raw)
         unit_price = float(unit_price_raw)
     except ValueError:
         return None
 
-    base.update(
-        {
-            "request_id": f"REQ-{sku}",
-            "part_reference": sku,
-            "description": item_name,
-            "quantity": quantity,
-            "unit_price_eur": unit_price,
-            "supplier_name": supplier_name,
-        }
-    )
+    base.update({
+        "request_id":      f"REQ-{sku}",
+        "part_reference":  sku,
+        "description":     item_name,
+        "quantity":        quantity,
+        "unit_price_eur":  unit_price,
+        "supplier_name":   supplier_name,
+    })
     return base
 
 
 def _build_invoice_from_request(request_payload: dict, scenario: str) -> dict:
     base_invoice = invoice_parser.get_mock_invoice(scenario)
-    quantity = float(request_payload.get("quantity", 0))
+    quantity   = float(request_payload.get("quantity", 0))
     unit_price = float(request_payload.get("unit_price_eur", 0))
-    total = round(quantity * unit_price, 2)
+    total      = round(quantity * unit_price, 2)
 
-    base_invoice["supplier_name"] = request_payload.get("supplier_name", base_invoice.get("supplier_name", ""))
-    base_invoice["supplier_id"] = request_payload.get("supplier_id", base_invoice.get("supplier_id", ""))
-    base_invoice["supplier_iban"] = request_payload.get("supplier_iban", base_invoice.get("supplier_iban", ""))
-    base_invoice["payment_terms"] = request_payload.get("payment_terms", base_invoice.get("payment_terms", "NET30"))
-    base_invoice["currency"] = request_payload.get("currency", base_invoice.get("currency", "EUR"))
-    base_invoice["line_items"][0]["part_reference"] = request_payload.get(
-        "part_reference",
-        base_invoice["line_items"][0].get("part_reference", ""),
-    )
-    base_invoice["line_items"][0]["description"] = request_payload.get(
-        "description",
-        base_invoice["line_items"][0].get("description", ""),
-    )
-    base_invoice["line_items"][0]["quantity"] = quantity
-    base_invoice["line_items"][0]["unit_price_eur"] = unit_price
-    base_invoice["line_items"][0]["total_eur"] = total
+    base_invoice["supplier_name"]  = request_payload.get("supplier_name",  base_invoice.get("supplier_name", ""))
+    base_invoice["supplier_id"]    = request_payload.get("supplier_id",    base_invoice.get("supplier_id", ""))
+    base_invoice["supplier_iban"]  = request_payload.get("supplier_iban",  base_invoice.get("supplier_iban", ""))
+    base_invoice["payment_terms"]  = request_payload.get("payment_terms",  base_invoice.get("payment_terms", "NET30"))
+    base_invoice["currency"]       = request_payload.get("currency",       base_invoice.get("currency", "EUR"))
+    base_invoice["line_items"][0]["part_reference"] = request_payload.get("part_reference", base_invoice["line_items"][0].get("part_reference", ""))
+    base_invoice["line_items"][0]["description"]    = request_payload.get("description",    base_invoice["line_items"][0].get("description", ""))
+    base_invoice["line_items"][0]["quantity"]        = quantity
+    base_invoice["line_items"][0]["unit_price_eur"]  = unit_price
+    base_invoice["line_items"][0]["total_eur"]       = total
     base_invoice["total_eur"] = total
-
     return base_invoice
+
 
 def _reset():
     for k, v in _DEFAULTS.items():
         if k not in ("user_access_token", "token_source", "token_data", "auth_url", "oauth_state_sent"):
             st.session_state[k] = v
 
+def _build_swan_oauth_url() -> str:
+    state = secrets.token_urlsafe(16)
+    st.session_state["oauth_state_sent"] = state
+    return SWAN_AUTH_URL + "?" + urllib.parse.urlencode({
+        "response_type": "code",
+        "client_id":     CLIENT_ID,
+        "redirect_uri":  REDIRECT_URI,
+        "scope":         "openid offline",
+        "state":         state,
+    })
+
+def _start_oauth_redirect():
+    st.session_state["pending_oauth_url"] = _build_swan_oauth_url()
+    st.session_state["app_state"] = "oauth_redirect"
+
+def _is_auth_error(result: dict) -> bool:
+    if (result.get("status") or "") == "TOKEN_MISSING":
+        return True
+    err = (result.get("error") or "").lower()
+    return any(s in err for s in (
+        "http 401", "http 403", "unauthorized",
+        "invalid_grant", "invalid_token", "token expired",
+        "token is missing", "token has expired",
+    ))
+
 def _do_execute_payment(comment: str = ""):
     trail    = st.session_state["audit_trail"]
     pd_data  = st.session_state["payment_draft"]
-    exec_mode = _exec_mode()
     now_iso  = datetime.datetime.utcnow().isoformat() + "Z"
-    tok      = st.session_state["user_access_token"]
+    tok      = (st.session_state.get("user_access_token") or "").strip()
 
     trail = audit.log_event(trail, "human_approved", {
         "comment": comment, "draft_id": pd_data["payment_draft_id"],
-        "execution_mode": exec_mode,
+        "execution_mode": "SWAN_SANDBOX",
     })
     st.session_state["review_comment"] = comment
+    st.session_state["audit_trail"]    = trail
 
-    if exec_mode == "SWAN_SANDBOX":
-        trail = audit.log_event(trail, "payment_execution_started", {"draft_id": pd_data["payment_draft_id"]})
-        result = swan_executor.execute_payment(pd_data, user_token=tok or None)
-        st.session_state["execution_result"] = result
-        tl_now = st.session_state["timeline"]
-        if result.get("status") == "ConsentPending":
-            pd_data["status"] = "CONSENT_PENDING"
-            tl_now["payment_consent_pending"] = result.get("executed_at", now_iso)
-            trail = audit.log_event(trail, "payment_consent_pending", {"payment_id": result.get("payment_id")})
-            st.session_state["app_state"] = "consent_pending"
-        elif result.get("success"):
+    # No active user token → kick off Swan OAuth, resume after callback.
+    if not tok:
+        st.session_state["resume_payment_after_oauth"] = True
+        _start_oauth_redirect()
+        return
+
+    trail = audit.log_event(trail, "payment_execution_started", {"draft_id": pd_data["payment_draft_id"]})
+    # Real backend call — initiates the actual transfer and triggers SCA / SMS verification.
+    result = swan_executor.execute_payment(pd_data, user_token=tok)
+    st.session_state["execution_result"] = result
+
+    # Token rejected / expired / unauthorized → drop it and force fresh OAuth.
+    if _is_auth_error(result):
+        st.session_state["user_access_token"] = ""
+        st.session_state["token_source"]      = None
+        st.session_state["resume_payment_after_oauth"] = True
+        st.session_state["audit_trail"] = trail
+        _start_oauth_redirect()
+        return
+
+    tl_now      = st.session_state["timeline"]
+    consent_url = result.get("consent_url")
+    ts          = result.get("executed_at", now_iso)
+
+    if consent_url:
+        # Verification step required: route the browser to the verification page.
+        # On return through /callback the app_state flips to payment_submitted.
+        pd_data["status"] = "CONSENT_PENDING"
+        tl_now["payment_consent_pending"] = ts
+        trail = audit.log_event(trail, "payment_consent_pending",
+                                {"payment_id": result.get("payment_id")})
+        st.session_state["pending_consent_url"] = consent_url
+        st.session_state["app_state"] = "consent_pending"
+    else:
+        # No verification redirect. Product UI must always resolve to "Payment sent";
+        # technical success/failure detail is preserved in execution_result + audit_trail.
+        if result.get("success"):
             pd_data["status"] = "EXECUTED"
-            tl_now["payment_execution_completed"] = result.get("executed_at", now_iso)
-            trail = audit.log_event(trail, "payment_execution_completed", {"payment_id": result.get("payment_id")})
-            st.session_state["app_state"] = "payment_submitted"
+            trail = audit.log_event(trail, "payment_execution_completed",
+                                    {"payment_id": result.get("payment_id")})
         else:
             pd_data["status"] = "EXECUTION_FAILED"
-            tl_now["payment_execution_failed"] = result.get("executed_at", now_iso)
-            trail = audit.log_event(trail, "payment_execution_failed", {"error": result.get("error")})
-            st.session_state["app_state"] = "payment_failed"
-        st.session_state["timeline"] = tl_now
-    else:
-        pd_data["status"] = "APPROVED_PENDING_EXECUTION"
-        tl_now = st.session_state["timeline"]
-        tl_now["mock_approved"] = now_iso
-        st.session_state["timeline"] = tl_now
+            trail = audit.log_event(trail, "payment_execution_failed",
+                                    {"error": result.get("error")})
+        tl_now["payment_execution_completed"] = ts
         st.session_state["app_state"] = "payment_submitted"
-
+    st.session_state["timeline"]    = tl_now
     st.session_state["audit_trail"] = trail
 
 # ── Dialogs ────────────────────────────────────────────────────────────────────
@@ -398,9 +434,22 @@ Review the payment details below before confirming.
     comment = st.text_area("Note (optional)", key="confirm_comment", height=60)
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("Confirm payment", type="primary", use_container_width=True):
-            _do_execute_payment(comment)
-            st.rerun()
+        if _exec_mode() == "MOCK":
+            if not st.session_state.get("oauth_state_sent"):
+                st.session_state["oauth_state_sent"] = secrets.token_urlsafe(16)
+            _auth_url = SWAN_AUTH_URL + "?" + urllib.parse.urlencode({
+                "response_type": "code",
+                "client_id":     CLIENT_ID,
+                "redirect_uri":  REDIRECT_URI,
+                "scope":         "openid offline",
+                "state":         st.session_state["oauth_state_sent"],
+            })
+            st.link_button("🔐 Sign in with Swan to confirm payment", _auth_url,
+                           use_container_width=True, type="primary")
+        else:
+            if st.button("Confirm payment", type="primary", use_container_width=True):
+                _do_execute_payment(comment)
+                st.rerun()
     with col2:
         if st.button("Cancel", type="secondary", use_container_width=True):
             st.rerun()
@@ -409,7 +458,73 @@ Review the payment details below before confirming.
 if st.session_state["raw_request"] is None:
     st.session_state["raw_request"] = _load_request_from_query() or _load_mock_request()
 raw       = st.session_state["raw_request"]
+
+# ── Resume Confirm payment after OAuth callback ───────────────────────────────
+# Callback set _just_got_token + user_access_token. If the user had clicked
+# Confirm payment before being redirected, retry the payment now.
+if _just_got_token and st.session_state.pop("resume_payment_after_oauth", False):
+    if st.session_state.get("payment_draft"):
+        _do_execute_payment(st.session_state.get("review_comment", ""))
+
 app_state = st.session_state["app_state"]
+
+# ── Auto-redirect to Swan OAuth ───────────────────────────────────────────────
+# Triggered by Confirm payment when the user token is missing or rejected by Swan.
+if app_state == "oauth_redirect":
+    _oauth_url = st.session_state.get("pending_oauth_url", "")
+    if _oauth_url:
+        components.html(
+            f"""
+            <script>
+              var u = {json.dumps(_oauth_url)};
+              try {{ window.top.location.href = u; }} catch(e) {{}}
+              try {{ window.parent.location.href = u; }} catch(e) {{}}
+              try {{ window.location.href = u; }} catch(e) {{}}
+            </script>
+            """,
+            height=0,
+        )
+        st.markdown(
+            '<div style="text-align:center;padding:2rem 1rem .8rem;color:#6b7280;font-size:.95rem">'
+            'Continuing to verification…'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+        _, _mid, _ = st.columns([1, 1, 1])
+        with _mid:
+            st.link_button("Continue →", _oauth_url, type="primary", use_container_width=True)
+        st.stop()
+
+# ── Auto-redirect to verification (real SCA / SMS step) ───────────────────────
+# When the backend returns a verification URL, route the browser there immediately.
+# On return via /callback, app_state becomes "payment_submitted" → screen shows
+# "Payment sent". Runs before any UI render so no provider details ever appear.
+if app_state == "consent_pending":
+    _consent_url = st.session_state.get("pending_consent_url", "")
+    if _consent_url:
+        # Try every escape path; sandboxed iframe may block window.top.
+        components.html(
+            f"""
+            <script>
+              var u = {json.dumps(_consent_url)};
+              try {{ window.top.location.href = u; }} catch(e) {{}}
+              try {{ window.parent.location.href = u; }} catch(e) {{}}
+              try {{ window.location.href = u; }} catch(e) {{}}
+            </script>
+            """,
+            height=0,
+        )
+        # Visible fallback if browser blocks the auto-redirect.
+        st.markdown(
+            '<div style="text-align:center;padding:2rem 1rem .8rem;color:#6b7280;font-size:.95rem">'
+            'Continuing to verification…'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+        _, _mid, _ = st.columns([1, 1, 1])
+        with _mid:
+            st.link_button("Continue →", _consent_url, type="primary", use_container_width=True)
+        st.stop()
 
 # ── Page header ────────────────────────────────────────────────────────────────
 hdr_l, hdr_r = st.columns([5, 2])
@@ -419,11 +534,26 @@ with hdr_l:
                 unsafe_allow_html=True)
 with hdr_r:
     st.write("")
-    if st.button("Reset", type="secondary"):
+    if st.button("Reset", type="secondary", use_container_width=True):
         _reset()
         st.rerun()
 
 st.markdown('<hr class="sec-divider"/>', unsafe_allow_html=True)
+
+# ── OAuth callback errors ──────────────────────────────────────────────────────
+if _oauth_err:
+    st.error(f"Swan OAuth error: {_oauth_err}")
+if _oauth_exch_err:
+    _err_code = _oauth_exch_err.get("error", "")
+    _err_desc = _oauth_exch_err.get("description", "") or _oauth_exch_err.get("detail", "")
+    if _err_code == "invalid_grant":
+        st.error("Swan OAuth — **invalid_grant**: the authorization code has already been used or has expired. "
+                 "Please click **Approve payment** again to restart the sign-in flow.")
+    elif _err_code == "invalid_client":
+        st.error("Swan OAuth — **invalid_client**: check SWAN_CLIENT_ID / SWAN_CLIENT_SECRET in .env")
+    else:
+        st.error(f"Swan OAuth — token exchange error ({_oauth_exch_err.get('http_status','')}): "
+                 f"{_err_code} — {_err_desc}")
 
 # ── Pipeline trigger ───────────────────────────────────────────────────────────
 if app_state == "idle":
@@ -539,12 +669,11 @@ with col_left:
 
     # Case summary card
     state_chip_map = {
-        "preparing":         ("Processing",           "blue"),
-        "ready_for_review":  ("Pending review",       "orange"),
-        "consent_pending":   ("Verification pending", "purple"),
-        "payment_submitted": ("Payment sent",         "teal"),
-        "payment_failed":    ("Payment failed",       "red"),
-        "rejected":          ("Rejected",             "red"),
+        "preparing":         ("Processing",     "blue"),
+        "ready_for_review":  ("Pending review", "orange"),
+        "consent_pending":   ("Payment sent",   "teal"),
+        "payment_submitted": ("Payment sent",   "teal"),
+        "rejected":          ("Rejected",       "red"),
     }
     s_label, s_kind = state_chip_map.get(app_state, ("—", "grey"))
     scenario_label  = mi.get("scenario", "exact_match").replace("_", " ").title()
@@ -688,22 +817,11 @@ with col_left:
                     st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
-    elif app_state == "payment_submitted":
+    elif app_state in ("payment_submitted", "consent_pending"):
         if ex and ex.get("success"):
             st.success(f"Payment sent — ID: `{ex.get('payment_id')}`")
         else:
             st.success("Payment sent.")
-
-    elif app_state == "consent_pending":
-        ex_obj      = st.session_state.get("execution_result") or {}
-        consent_url = ex_obj.get("consent_url")
-        st.info("Final confirmation required to complete the payment.")
-        if consent_url:
-            st.link_button("Complete verification →", consent_url, type="primary")
-
-    elif app_state == "payment_failed":
-        ex_obj = st.session_state.get("execution_result") or {}
-        st.error(f"Payment failed — {ex_obj.get('error', 'Unknown error')}")
 
     elif app_state == "rejected":
         st.error("Case rejected.")
@@ -751,11 +869,9 @@ with col_right:
     _t_row("Pending review",         tl.get("waiting_human_review"),      review_style)
 
     if tl.get("payment_consent_pending"):
-        _t_row("Final confirmation", tl["payment_consent_pending"],       "warn")
+        _t_row("Final confirmation", tl["payment_consent_pending"],       "done")
     if tl.get("payment_execution_completed"):
         _t_row("Payment sent",       tl["payment_execution_completed"],   "done")
-    if tl.get("payment_execution_failed"):
-        _t_row("Payment failed",     tl["payment_execution_failed"],      "err")
     if tl.get("mock_approved"):
         _t_row("Payment sent",       tl["mock_approved"],                 "done")
     if tl.get("rejected"):
