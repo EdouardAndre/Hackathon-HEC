@@ -6,7 +6,7 @@ import { ItemStatusBar } from "./components/ItemStatusBar";
 import type { InventoryItem, RestockStatus } from "./types";
 
 const paymentUrl =
-  import.meta.env.VITE_PAYMENT_URL ?? "https://example.com/payment";
+  import.meta.env.VITE_PAYMENT_URL ?? "http://localhost:8501";
 const statusPriority: Record<RestockStatus, number> = { critical: 0, warning: 1, healthy: 2 };
 
 function sortItemsByPriority(items: InventoryItem[]): InventoryItem[] {
@@ -74,13 +74,7 @@ export default function App() {
     <div className="dashboard-shell">
       <div className="app-shell">
         <header className="hero">
-          <div className="hero__copy">
-            <p className="hero__eyebrow">Overview</p>
-            <h1>BOB supplier dashboard</h1>
-            <p className="hero__subcopy">
-              Your AI agent prioritizes items that need supplier action first.
-            </p>
-          </div>
+          <h1 className="hero__title">MRO Pilot</h1>
 
           <div className="hero__summary" aria-label="Inventory summary">
             <div className="summary-card summary-card--critical">

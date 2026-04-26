@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.openapi.utils import get_openapi
 
 from app.api_docs import DESCRIPTION, TAGS_METADATA
 from app.core.config import get_settings
