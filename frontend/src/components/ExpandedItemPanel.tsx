@@ -8,15 +8,11 @@ type ExpandedItemPanelProps = {
   paymentUrl: string;
 };
 
-function estimateOrderQuantity(item: InventoryItem): number {
-  return Math.max(item.reorderPoint * 2 - item.currentQuantity, item.reorderPoint);
-}
-
 export function ExpandedItemPanel({ item, paymentUrl }: ExpandedItemPanelProps) {
   const [selectedOption, setSelectedOption] = useState<SupplierOption>(item.bestOption);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
-  const orderQuantity = estimateOrderQuantity(item);
+  const orderQuantity = item.requiredQuantity;
 
   useEffect(() => {
     if (!isPopoverOpen) {
@@ -43,8 +39,11 @@ export function ExpandedItemPanel({ item, paymentUrl }: ExpandedItemPanelProps) 
   function handleConfirm() {
     const checkoutUrl = new URL(paymentUrl);
     checkoutUrl.searchParams.set("item", item.name);
+    checkoutUrl.searchParams.set("sku", item.sku);
     checkoutUrl.searchParams.set("supplier", selectedOption.supplierName);
     checkoutUrl.searchParams.set("quantity", String(orderQuantity));
+    checkoutUrl.searchParams.set("unitLabel", item.unitLabel);
+    checkoutUrl.searchParams.set("unitPrice", selectedOption.unitPrice.toFixed(2));
     window.location.href = checkoutUrl.toString();
   }
 

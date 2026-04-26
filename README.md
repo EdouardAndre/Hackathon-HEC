@@ -69,6 +69,21 @@ Backend URLs:
 - Docs: `http://127.0.0.1:8000/docs`
 - Health: `http://127.0.0.1:8000/health`
 
+### 3. Payment App
+
+The frontend confirm action redirects to the standalone Streamlit payment flow in `Black_swan`.
+
+```bash
+cd /Users/eda/Documents/Hackathon_HEC/Hackathon-HEC/Black_swan
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+streamlit run streamlit_app.py
+```
+
+Payment app URL:
+- `http://127.0.0.1:8501`
+
 ## Runtime Notes
 
 ### Dashboard-only usage
