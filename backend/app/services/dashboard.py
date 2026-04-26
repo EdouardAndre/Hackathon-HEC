@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 import os
 from dataclasses import dataclass
+from datetime import date
 
 import pandas as pd
 
@@ -25,6 +26,7 @@ class DashboardItemMetadata:
     name: str
     sku: str
     unit_label: str
+    target_cover_days: int
 
 
 ITEM_METADATA: tuple[DashboardItemMetadata, ...] = (
@@ -33,24 +35,28 @@ ITEM_METADATA: tuple[DashboardItemMetadata, ...] = (
         name="Thermal Receipt Paper",
         sku="BOB-POS-ROLL-57",
         unit_label="rolls",
+        target_cover_days=4,
     ),
     DashboardItemMetadata(
         item_id=9,
         name="Courier Shipping Pouches",
         sku="BOB-SHP-PCH-001",
         unit_label="packs",
+        target_cover_days=7,
     ),
     DashboardItemMetadata(
         item_id=7,
         name="Barcode Label Rolls",
         sku="BOB-LBL-4X6",
         unit_label="rolls",
+        target_cover_days=16,
     ),
     DashboardItemMetadata(
         item_id=15,
         name="Tamper-Evident Deposit Bags",
         sku="BOB-DEP-BAG-SEC",
         unit_label="bags",
+        target_cover_days=3,
     ),
 )
 
@@ -82,7 +88,12 @@ class DashboardService:
         )
         median_demand = sum(day.quantity_median for day in forecast.daily_forecasts[:7])
         reorder_point = max(1, math.ceil(median_demand))
-        status = self._derive_status(forecast.required_quantity, forecast.expected_shortage_date)
+        forecast_start_date = forecast.daily_forecasts[0].date if forecast.daily_forecasts else None
+        status = self._derive_status(
+            required_quantity=forecast.required_quantity,
+            shortage_date=forecast.expected_shortage_date,
+            forecast_start_date=forecast_start_date,
+        )
         supplier_options = self._select_supplier_options(forecast.required_quantity)
         best_option = supplier_options[0] if supplier_options else None
         alternatives = supplier_options[1:] if len(supplier_options) > 1 else []
@@ -120,7 +131,10 @@ class DashboardService:
 
         selected = store_summary.iloc[0]
         store_id = int(selected["store"])
-        current_quantity = max(1, int(math.ceil(float(selected["sum"]))))
+        metadata = next(item for item in ITEM_METADATA if item.item_id == item_id)
+        store_history = item_history[item_history["store"] == store_id].sort_values("date")
+        recent_mean = float(store_history.tail(7)["sales"].mean())
+        current_quantity = max(1, int(math.ceil(recent_mean * metadata.target_cover_days)))
         return store_id, current_quantity
 
     def _has_demand_history(self, item_id: int) -> bool:
@@ -167,10 +181,17 @@ class DashboardService:
 
         return options
 
-    def _derive_status(self, required_quantity: int, shortage_date: object) -> str:
-        if shortage_date is not None and required_quantity > 0:
-            return "critical"
-        if required_quantity > 0:
+    def _derive_status(
+        self,
+        required_quantity: int,
+        shortage_date: date | None,
+        forecast_start_date: date | None,
+    ) -> str:
+        if shortage_date is not None and forecast_start_date is not None:
+            days_until_shortage = (shortage_date - forecast_start_date).days + 1
+            if days_until_shortage <= 5:
+                return "critical"
+        if required_quantity > 0 or shortage_date is not None:
             return "warning"
         return "healthy"
 
