@@ -1,70 +1,112 @@
 # Hackathon HEC
 
-FastAPI backend scaffold plus a React landing page prototype for inventory forecasting, supplier comparison, and purchase-order flow exploration.
+Inventory forecasting and supplier-selection demo for a fintech / ops hackathon.
 
-## Structure
+This repo contains:
+- a `FastAPI` backend that serves forecast-driven dashboard data, supplier recommendations, and order endpoints
+- a `React + TypeScript + Vite` frontend that displays inventory risk, recommended suppliers, alternatives, and checkout flow
+
+## What We Built
+
+The app is a lightweight inventory control dashboard for a single-operator workflow:
+- the backend uses the demand forecasting dataset to build dashboard items
+- the dashboard endpoint enriches those items with forecast output and ranked supplier options
+- the frontend shows items sorted by urgency and lets the user inspect the optimal supplier, compare alternatives, and continue to payment
+
+
+## Repo Structure
 
 ```text
 frontend/
   src/
+    components/
+    api.ts
+    App.tsx
+    styles.css
 backend/
-  alembic/
-    versions/
   app/
-    api/
-      routes/
     core/
-    integrations/
-      ap2/
-    models/
+    presentation/
+      routes/
+      schemas/
     repositories/
-    schemas/
     services/
     main.py
-  tests/
-  .env.example
-  alembic.ini
+  data/
+    supplier_dataset.xlsx
+  alembic/
   requirements.txt
+demand-forecasting-kernels-only/
+  train.csv
 ```
 
-## Quick Start
+## How To Run
 
-### Frontend
+### 1. Frontend
 
 ```bash
-cd frontend
-cp .env.example .env
+cd /Users/eda/Documents/Hackathon_HEC/Hackathon-HEC/frontend
 npm install
 npm run dev
 ```
 
-The landing page runs at `http://localhost:5173` and currently uses fake static inventory and supplier data.
+Frontend URL:
+- `http://localhost:5173`
 
-### Backend
-
-1. Create a virtual environment and install dependencies.
-2. Copy `backend/.env.example` to `backend/.env`.
-3. Update the PostgreSQL connection string.
-4. Run migrations.
-5. Start the API server.
+### 2. Backend
 
 ```bash
-cd backend
+cd /Users/eda/Documents/Hackathon_HEC/Hackathon-HEC/backend
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
-alembic upgrade head
-uvicorn app.main:app --reload
+.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-## Example Endpoints
+Backend URLs:
+- API root: `http://127.0.0.1:8000`
+- Docs: `http://127.0.0.1:8000/docs`
+- Health: `http://127.0.0.1:8000/health`
+
+## Runtime Notes
+
+### Dashboard-only usage
+
+If you only want the frontend dashboard and its backend data feed:
+- you do **not** need PostgreSQL for `GET /api/v1/dashboard/items`
+- that endpoint uses:
+  - `demand-forecasting-kernels-only/train.csv`
+  - `backend/data/supplier_dataset.xlsx`
+  - the forecasting service
+
+### PostgreSQL-backed usage
+
+You still need PostgreSQL if you want to use:
+- `GET /api/v1/suppliers`
+- `POST /api/v1/suppliers`
+- `GET /api/v1/inventory/current`
+- `POST /api/v1/inventory`
+- `POST /api/v1/recommendations/suppliers`
+- `POST /api/v1/orders/drafts`
+- `POST /api/v1/orders/{order_id}/confirm`
+- `GET /api/v1/orders/{order_id}`
+
+If you plan to use those endpoints, update `backend/.env` with a valid `DATABASE_URL` and run migrations:
+
+```bash
+cd /Users/eda/Documents/Hackathon_HEC/Hackathon-HEC/backend
+source .venv/bin/activate
+alembic upgrade head
+```
+
+## Main Endpoints
 
 ### Health
 
 - `GET /health`
 
-Response:
+Example response:
 
 ```json
 {
@@ -72,178 +114,94 @@ Response:
 }
 ```
 
-### Suppliers
+### Dashboard Items
 
-- `POST /api/v1/suppliers`
-- `GET /api/v1/suppliers`
+- `GET /api/v1/dashboard/items`
 
-Create request:
-
-```json
-{
-  "name": "Supplier A",
-  "lead_time_days": 5,
-  "available_quantity": 800,
-  "current_unit_price": 12.5,
-  "reliability_score": 0.94
-}
-```
-
-Create response:
+Example response shape:
 
 ```json
 {
-  "id": 1,
-  "name": "Supplier A",
-  "lead_time_days": 5,
-  "available_quantity": 800,
-  "current_unit_price": 12.5,
-  "reliability_score": 0.94,
-  "created_at": "2026-04-26T00:00:00Z"
-}
-```
-
-### Inventory Snapshot
-
-- `POST /api/v1/inventory`
-- `GET /api/v1/inventory/current`
-
-Request:
-
-```json
-{
-  "stock_level": 240
-}
-```
-
-Response:
-
-```json
-{
-  "id": 1,
-  "stock_level": 240,
-  "recorded_at": "2026-04-26T00:00:00Z"
-}
-```
-
-### Forecast Placeholder
-
-- `POST /api/v1/forecasting/manual`
-
-Request:
-
-```json
-{
-  "expected_shortage_date": "2026-05-03",
-  "required_quantity": 300
-}
-```
-
-Response:
-
-```json
-{
-  "expected_shortage_date": "2026-05-03",
-  "required_quantity": 300,
-  "source": "manual"
-}
-```
-
-### Supplier Recommendations
-
-- `POST /api/v1/recommendations/suppliers`
-
-Request:
-
-```json
-{
-  "expected_shortage_date": "2026-05-03",
-  "required_quantity": 300
-}
-```
-
-Response:
-
-```json
-{
-  "forecast": {
-    "expected_shortage_date": "2026-05-03",
-    "required_quantity": 300,
-    "source": "manual"
-  },
-  "recommendations": [
+  "items": [
     {
-      "supplier_id": 1,
-      "supplier_name": "Supplier A",
-      "can_fulfill": true,
-      "recommended_quantity": 300,
-      "lead_time_days": 5,
-      "available_quantity": 800,
-      "current_unit_price": 12.5,
-      "reliability_score": 0.94,
-      "score": 0.9027
+      "id": "store-8-item-1",
+      "name": "Thermal Receipt Paper",
+      "sku": "BOB-POS-ROLL-57",
+      "unit_label": "rolls",
+      "store_id": 8,
+      "item_id": 1,
+      "current_quantity": 96,
+      "reorder_point": 168,
+      "status": "warning",
+      "expected_shortage_date": "2018-01-03",
+      "required_quantity": 241,
+      "forecast_source": "chronos",
+      "best_option": {
+        "supplier_name": "Prime Direct",
+        "unit_price": 282.51,
+        "lead_time_days": 2,
+        "reliability_score": 0.6254,
+        "available_quantity": 745
+      },
+      "alternatives": [
+        {
+          "supplier_name": "Apex Partners",
+          "unit_price": 246.05,
+          "lead_time_days": 25,
+          "reliability_score": 0.6535,
+          "available_quantity": 891
+        }
+      ]
     }
   ]
 }
 ```
 
-### Orders
+### Forecast Quantity
 
-- `POST /api/v1/orders/drafts`
-- `POST /api/v1/orders/{order_id}/confirm`
-- `GET /api/v1/orders/{order_id}`
+- `POST /api/v1/forecasting/predict`
 
-Draft request:
+Example request:
 
 ```json
 {
-  "supplier_id": 1,
-  "quantity": 300,
-  "expected_shortage_date": "2026-05-03"
+  "store_id": 1,
+  "item_id": 1,
+  "current_stock": 80,
+  "prediction_days": 14
 }
 ```
 
-Draft response:
+Example response:
 
 ```json
 {
-  "id": 1,
-  "supplier_id": 1,
-  "quantity": 300,
-  "unit_price": 12.5,
-  "status": "draft",
-  "expected_shortage_date": "2026-05-03",
-  "ap2_reference": null,
-  "created_at": "2026-04-26T00:00:00Z",
-  "updated_at": "2026-04-26T00:00:00Z"
+  "required_quantity": 609
 }
 ```
 
-Confirm response:
+## Frontend Behavior
 
-```json
-{
-  "id": 1,
-  "supplier_id": 1,
-  "quantity": 300,
-  "unit_price": 12.5,
-  "status": "confirmed",
-  "expected_shortage_date": "2026-05-03",
-  "ap2_reference": "AP2-MOCK-1",
-  "created_at": "2026-04-26T00:00:00Z",
-  "updated_at": "2026-04-26T00:05:00Z"
-}
-```
+The frontend:
+- fetches dashboard items from `GET /api/v1/dashboard/items`
+- sorts items by priority: `critical`, then `warning`, then `healthy`
+- shows the optimal supplier inside the expanded row
+- opens supplier alternatives in a popover
+- redirects to the configured payment URL when the user confirms a supplier
 
-## Notes
-
-- Authentication is intentionally left as a TODO for hackathon speed.
-- Forecasting currently uses a manual placeholder service that can be replaced later.
-- AP2 confirmation currently uses a mock integration module.
 
 ## Tests
 
+Backend:
+
 ```bash
-cd backend
+cd /Users/eda/Documents/Hackathon_HEC/Hackathon-HEC/backend
 pytest
+```
+
+Frontend build:
+
+```bash
+cd /Users/eda/Documents/Hackathon_HEC/Hackathon-HEC/frontend
+npm run build
 ```
