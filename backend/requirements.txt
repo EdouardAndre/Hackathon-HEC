@@ -1,8 +1,23 @@
+# Web
 fastapi==0.115.0
 uvicorn[standard]==0.30.6
+
+# Database
 sqlalchemy==2.0.35
 alembic==1.13.3
-psycopg2-binary==2.9.9
-pydantic==2.9.2
+psycopg2-binary==2.9.10
+
+# Validation / settings
+pydantic==2.13.3
 pydantic-settings==2.5.2
+
+# ML — forecasting
+torch==2.11.0
+numpy==2.4.4
+pandas==3.0.2
+chronos-forecasting==2.2.2
+transformers==4.57.6
+accelerate==1.13.0
+
+# Tests
 pytest==8.3.3

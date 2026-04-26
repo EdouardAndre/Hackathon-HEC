@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from fastapi import HTTPException
 
-from app.integrations.ap2.client import AP2Client, AP2OrderSubmission, MockAP2Client
-from app.models.purchase_order import PurchaseOrder, PurchaseOrderStatus
+from app.services.integrations.ap2.client import AP2Client, AP2OrderSubmission, MockAP2Client
+from app.repositories.models.purchase_order import PurchaseOrder, PurchaseOrderStatus
 from app.repositories.purchase_orders import PurchaseOrderRepository
 from app.repositories.suppliers import SupplierRepository
-from app.schemas.orders import PurchaseOrderCreate
+from app.presentation.schemas.orders import PurchaseOrderCreate
 
 
 class OrderManagementService:

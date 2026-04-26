@@ -1,8 +1,8 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.supplier import Supplier
-from app.schemas.suppliers import SupplierCreate
+from app.repositories.models.supplier import Supplier
+from app.presentation.schemas.suppliers import SupplierCreate
 
 
 class SupplierRepository:

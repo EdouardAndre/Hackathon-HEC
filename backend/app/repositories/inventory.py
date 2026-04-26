@@ -1,8 +1,8 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.inventory import InventorySnapshot
-from app.schemas.inventory import InventorySnapshotCreate
+from app.repositories.models.inventory import InventorySnapshot
+from app.presentation.schemas.inventory import InventorySnapshotCreate
 
 
 class InventoryRepository:
