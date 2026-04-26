@@ -8,6 +8,7 @@ from app.presentation.schemas.recommendations import (
     SupplierRecommendationResponse,
 )
 from app.services.forecasting import ForecastingService
+from app.services.ml_scoring import scoring_service
 
 
 def rank_suppliers(
@@ -17,24 +18,15 @@ def rank_suppliers(
     if not suppliers:
         return []
 
-    max_price = max(float(supplier.current_unit_price) for supplier in suppliers) or 1.0
-    max_available = max(supplier.available_quantity for supplier in suppliers) or 1
-    max_lead_time = max(supplier.lead_time_days for supplier in suppliers) or 1
-
     recommendations: list[SupplierRecommendationItem] = []
     for supplier in suppliers:
         can_fulfill = supplier.available_quantity >= required_quantity
-        fulfillment_score = 1.0 if can_fulfill else supplier.available_quantity / required_quantity
-        price_score = 1 - (float(supplier.current_unit_price) / max_price)
-        availability_score = supplier.available_quantity / max_available
-        lead_time_score = 1 - (supplier.lead_time_days / max_lead_time)
 
-        score = (
-            0.35 * fulfillment_score
-            + 0.20 * (supplier.reliability_score or 0.0)
-            + 0.20 * price_score
-            + 0.15 * availability_score
-            + 0.10 * lead_time_score
+        score = scoring_service.predict(
+            price=float(supplier.current_unit_price),
+            reliability=supplier.reliability_score or 0.0,
+            delivery_time=float(supplier.lead_time_days),
+            quantity=supplier.available_quantity,
         )
 
         recommendations.append(
