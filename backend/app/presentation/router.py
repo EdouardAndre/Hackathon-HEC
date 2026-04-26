@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from app.presentation.routes.dashboard import router as dashboard_router
 from app.presentation.routes.forecasting import router as forecasting_router
 from app.presentation.routes.inventory import router as inventory_router
 from app.presentation.routes.orders import router as orders_router
@@ -7,6 +8,7 @@ from app.presentation.routes.recommendations import router as recommendations_ro
 from app.presentation.routes.suppliers import router as suppliers_router
 
 api_router = APIRouter()
+api_router.include_router(dashboard_router, prefix="/dashboard", tags=["dashboard"])
 api_router.include_router(suppliers_router, prefix="/suppliers", tags=["suppliers"])
 api_router.include_router(inventory_router, prefix="/inventory", tags=["inventory"])
 api_router.include_router(forecasting_router, prefix="/forecasting", tags=["forecasting"])
