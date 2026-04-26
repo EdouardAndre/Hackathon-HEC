@@ -1,0 +1,65 @@
+{
+  "exact_match": {
+    "invoice_reference": "INV-DIS-20240315",
+    "invoice_date": "2024-03-15",
+    "supplier_id": "SUP-00089",
+    "supplier_name": "Demo Industrial Supplier",
+    "supplier_iban": "DE89370400440532013000",
+    "po_reference": null,
+    "line_items": [
+      {
+        "part_reference": "MRO-BEARING-6205",
+        "description": "Deep groove ball bearing 6205-2RS",
+        "quantity": 50,
+        "unit_price_eur": 12.50,
+        "total_eur": 625.00
+      }
+    ],
+    "total_eur": 625.00,
+    "currency": "EUR",
+    "payment_terms": "NET30",
+    "scenario": "exact_match"
+  },
+  "price_mismatch": {
+    "invoice_reference": "INV-DIS-20240316",
+    "invoice_date": "2024-03-16",
+    "supplier_id": "SUP-00089",
+    "supplier_name": "Demo Industrial Supplier",
+    "supplier_iban": "DE89370400440532013000",
+    "po_reference": null,
+    "line_items": [
+      {
+        "part_reference": "MRO-BEARING-6205",
+        "description": "Deep groove ball bearing 6205-2RS",
+        "quantity": 50,
+        "unit_price_eur": 13.80,
+        "total_eur": 690.00
+      }
+    ],
+    "total_eur": 690.00,
+    "currency": "EUR",
+    "payment_terms": "NET30",
+    "scenario": "price_mismatch"
+  },
+  "qty_mismatch": {
+    "invoice_reference": "INV-DIS-20240317",
+    "invoice_date": "2024-03-17",
+    "supplier_id": "SUP-00089",
+    "supplier_name": "Demo Industrial Supplier",
+    "supplier_iban": "DE89370400440532013000",
+    "po_reference": null,
+    "line_items": [
+      {
+        "part_reference": "MRO-BEARING-6205",
+        "description": "Deep groove ball bearing 6205-2RS",
+        "quantity": 75,
+        "unit_price_eur": 12.50,
+        "total_eur": 937.50
+      }
+    ],
+    "total_eur": 937.50,
+    "currency": "EUR",
+    "payment_terms": "NET30",
+    "scenario": "qty_mismatch"
+  }
+}

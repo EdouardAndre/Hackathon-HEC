@@ -1,0 +1,15 @@
+{
+  "request_id": "REQ-2024-00142",
+  "part_reference": "MRO-BEARING-6205",
+  "description": "Deep groove ball bearing 6205-2RS, steel cage, for CNC spindle maintenance",
+  "quantity": 50,
+  "unit_price_eur": 12.50,
+  "supplier_id": "SUP-00089",
+  "supplier_name": "Demo Industrial Supplier",
+  "supplier_iban": "DE89370400440532013000",
+  "site": "Paris-Nord",
+  "payment_terms": "NET30",
+  "requester": "ops-team@anypay.io",
+  "urgency": "normal",
+  "category": "MRO"
+}
