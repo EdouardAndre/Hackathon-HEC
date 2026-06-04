@@ -2,7 +2,7 @@
 
 <div align="center">
 
-### MRO Pilot
+# MRO Pilot
 
 ## 🥇 WINNER: Stanford × HEC × Sciences Po Fintech & AI Hackathon
 
