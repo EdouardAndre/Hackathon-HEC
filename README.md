@@ -1,51 +1,47 @@
-<div align="center">
 
-# 🏆 Project Black Swan
-
-### Autonomous inventory forecasting, supplier selection & AI-driven AP payment agent
-
-</div>
-
----
 
 <div align="center">
 
-## 🥇 WINNER — Stanford × HEC × Sciences Po Fintech & AI Hackathon
+### MRO Pilot
 
-**This project won 1st place** at the **Stanford × HEC × Sciences Po Fintech & AI Hackathon.** 🎉
+## 🥇 WINNER: Stanford × HEC × Sciences Po Fintech & AI Hackathon
+
+### Autonomous inventory forecasting, supplier selection & AI-driven AP payment agen
+
+**This project won 1st place** at the **Stanford × HEC × Sciences Po Fintech & AI Hackathon.**
 
 Out of all competing teams, **Black Swan was selected as the winning project** for delivering a complete,
 end-to-end procurement workflow that combines **demand forecasting**, **automated supplier selection**, and a
 fully autonomous **AI accounts-payable agent** capable of executing real payments through the Swan banking API.
 
-> 💡 From "we're running low on stock" to a **paid, AI-vetted supplier invoice** — with a human approving a single click.
+> From "we're running low on stock" to a **paid, AI-vetted supplier invoice**, with a human approving a single click.
 
 </div>
 
 ---
 
-## 📌 Overview
+## Overview
 
-**Black Swan** is an end-to-end **MRO procurement automation platform** that closes the loop between *forecasting demand* and *paying suppliers* — a workflow that is normally split across analysts, buyers, and finance teams.
+**Black Swan** is an end-to-end **MRO procurement automation platform** that closes the loop between *forecasting demand* and *paying suppliers*, a workflow that is normally split across analysts, buyers, and finance teams.
 
 The system:
 
-- 📈 **Forecasts** inventory shortages from real demand data
-- 🧮 **Ranks suppliers** by price, lead time, and reliability for each at-risk item
-- 🛒 Lets an operator **review and confirm** an order in one screen
-- 🤖 Hands off to an **autonomous AI accounts-payable agent** that creates the PO, parses the invoice, runs a 2-way match, scores fraud/risk with Gemini, and **executes the payment** via the Swan sandbox — all behind a single human approval
+- **Forecasts** inventory shortages from real demand data
+- **Ranks suppliers** by price, lead time, and reliability for each at-risk item
+- Lets an operator **review and confirm** an order in one screen
+- Hands off to an **autonomous AI accounts-payable agent** that creates the PO, parses the invoice, runs a 2-way match, scores fraud/risk with Gemini, and **executes the payment** via the Swan sandbox, all behind a single human approval
 
 This repo contains three coordinated services:
 
 | Service | Stack | Role |
 |---|---|---|
 | **Backend** | `FastAPI` | Serves forecast-driven dashboard data, supplier recommendations, and order endpoints |
-| **Frontend** | `React + TypeScript + Vite` | Inventory risk dashboard — supplier comparison, alternatives, and checkout flow |
-| **Black_swan (AP Agent)** | `Streamlit` + `Gemini` + `Swan API` | Full AP pipeline — PO creation, invoice matching, AI risk analysis, and real payment execution |
+| **Frontend** | `React + TypeScript + Vite` | Inventory risk dashboard with supplier comparison, alternatives, and checkout flow |
+| **Black_swan (AP Agent)** | `Streamlit` + `Gemini` + `Swan API` | Full AP pipeline: PO creation, invoice matching, AI risk analysis, and real payment execution |
 
 ---
 
-## ✨ What We Built
+## What We Built
 
 The app covers a complete MRO procurement workflow, end to end:
 
@@ -57,18 +53,18 @@ The app covers a complete MRO procurement workflow, end to end:
 
 ---
 
-## 🧠 Why It Stood Out
+## Why It Stood Out
 
 What made this win the hackathon:
 
-- **🔁 True end-to-end automation** — most teams automate one step; Black Swan connects *forecast → supplier choice → PO → invoice match → AI risk → payment* in a single continuous flow.
-- **🤖 An AI agent with real financial authority** — Gemini doesn't just summarise; it issues a `proceed` / `hold` / `block` recommendation with a confidence score and risk flags that gate a real bank transfer.
-- **🏦 Real payment rails** — actual credit transfers through the Swan banking API (sandbox), complete with OAuth and SCA strong-customer-authentication consent.
-- **🧍 Human-in-the-loop by design** — automation handles the toil; a person keeps final authority with one informed click.
+- **True end-to-end automation.** Most teams automate one step; Black Swan connects *forecast → supplier choice → PO → invoice match → AI risk → payment* in a single continuous flow.
+- **An AI agent with real financial authority.** Gemini doesn't just summarise; it issues a `proceed` / `hold` / `block` recommendation with a confidence score and risk flags that gate a real bank transfer.
+- **Real payment rails.** Actual credit transfers through the Swan banking API (sandbox), complete with OAuth and SCA strong-customer-authentication consent.
+- **Human-in-the-loop by design.** Automation handles the toil; a person keeps final authority with one informed click.
 
 ---
 
-## 🗂️ Repo Structure
+## Repo Structure
 
 ```text
 frontend/
@@ -115,7 +111,7 @@ demand-forecasting-kernels-only/
 
 ---
 
-## 🚀 How To Run
+## How To Run
 
 ### 1. Frontend
 
@@ -125,7 +121,7 @@ npm install
 npm run dev
 ```
 
-➡️ `http://localhost:5173`
+`http://localhost:5173`
 
 ### 2. Backend
 
@@ -153,7 +149,7 @@ cp .env.example .env   # then fill in credentials (see below)
 streamlit run streamlit_app.py --server.port 8501
 ```
 
-➡️ `http://localhost:8501`
+`http://localhost:8501`
 
 #### Required environment variables (`Black_swan/.env`)
 
@@ -162,12 +158,12 @@ streamlit run streamlit_app.py --server.port 8501
 | `GEMINI_API_KEY` | Gemini API key (or set `GOOGLE_CLOUD_PROJECT` for Vertex AI ADC) |
 | `SWAN_CLIENT_ID` | Swan sandbox OAuth client ID |
 | `SWAN_CLIENT_SECRET` | Swan sandbox OAuth client secret |
-| `SWAN_REDIRECT_URI` | Must be registered in Swan Dashboard — default `http://localhost:8501/callback` |
-| `SWAN_USER_ACCESS_TOKEN` | Optional — pre-filled user token; obtained automatically via the OAuth flow |
+| `SWAN_REDIRECT_URI` | Must be registered in Swan Dashboard. Default `http://localhost:8501/callback` |
+| `SWAN_USER_ACCESS_TOKEN` | Optional pre-filled user token; obtained automatically via the OAuth flow |
 
 ---
 
-## ⚙️ Runtime Notes
+## Runtime Notes
 
 ### Dashboard-only usage
 
@@ -204,7 +200,7 @@ docker run -d --name pg -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres
 
 ---
 
-## 🔌 Main Endpoints
+## Main Endpoints
 
 ### Health
 
@@ -273,7 +269,7 @@ Response:
 
 ---
 
-## 🖥️ Frontend Behavior
+## Frontend Behavior
 
 The frontend:
 
@@ -285,7 +281,7 @@ The frontend:
 
 ---
 
-## 🤖 AP Agent Pipeline (Black_swan)
+## AP Agent Pipeline (Black_swan)
 
 On arrival from the frontend, the Streamlit app runs this pipeline:
 
@@ -301,7 +297,7 @@ On arrival from the frontend, the Streamlit app runs this pipeline:
 
 ---
 
-## 🧪 Tests
+## Tests
 
 **Backend:**
 
@@ -320,7 +316,7 @@ npm run build
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 `FastAPI` · `React` · `TypeScript` · `Vite` · `Streamlit` · `Google Gemini` · `Swan Banking API` · `PostgreSQL` · `Alembic` · `Chronos forecasting`
 
@@ -328,7 +324,7 @@ npm run build
 
 <div align="center">
 
-### 🏆 Built to win — and it did.
+### Built to win, and it did.
 
 **Stanford × HEC × Sciences Po Fintech & AI Hackathon · 1st Place**
 
